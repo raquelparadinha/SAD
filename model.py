@@ -3,14 +3,23 @@ import matplotlib.pyplot as plt
 import plotext as plx
 import pandas as pd
 import seaborn as sns
-import matplotlib
-from sklearn.utils import resample
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn import metrics
 
-dataset = pd.read_csv('Dataset_Trabalho.csv', sep=';')
-print(dataset.describe())
+raw_data = pd.read_csv('Dataset_Trabalho.csv', sep=';')
+print(raw_data.describe())
 
+X = np.array(raw_data.values[1:, :10])
+Y = raw_data.values[1:, -1]
 
-ax = sns.countplot(x='Target', data=dataset)
+# splitting X and y into training and testing sets
+X_train, X_test,\
+	y_train, y_test = train_test_split(X, Y,
+									test_size=0.8,
+									random_state=1)
+
+ax = sns.countplot(x='Target', data=raw_data)
 
 # Extract the counts from the countplot
 x_labels = [tick.get_text() for tick in ax.get_xticklabels()]
@@ -26,34 +35,32 @@ plx.ylabel('Count')
 # Display the countplot in the terminal
 plx.show()
 
-df_majority = dataset[(dataset['Target']=='Graduate')] 
-df_intermediary = dataset[(dataset['Target']=='Dropout')]
-df_minority = dataset[(dataset['Target']=='Enrolled')] 
+# cov_matrix = np.corrcoef(X)
 
-# upsample minority class
-df_minority_upsampled = resample(df_minority, 
-                                 replace=True,    # sample with replacement
-                                 n_samples= int(counts[1])) # to match majority class
+# plx.matrix_plot(cov_matrix)
+# plx.plotsize(np.size(cov_matrix, 0), np.size(cov_matrix, 1))
+# plx.title("Covariance Matrix")
+# plx.show()
 
-df_intermediary_upsampled = resample(df_intermediary, 
-                                 replace=True,    # sample with replacement
-                                 n_samples= int(counts[1])) # to match majority class
+# Plot correlation matrix
+# plt.figure(figsize=(8, 8))
+# plt.imshow(cov_matrix, interpolation='nearest')
+# plt.title('Covariance Matrix')
+# plt.colorbar()
+# plt.show()
 
-# Combine majority class with upsampled minority class
-df_upsampled = pd.concat([df_intermediary_upsampled, df_majority, df_minority_upsampled])
-print(df_upsampled)
-ax = sns.countplot(x='Target', data=df_upsampled)
+# Create an instance of Logistic Regression Classifier and fit the data.
+logreg = LogisticRegression(C=1e5, max_iter=1000)
+logreg.fit(X_train, y_train)
 
-# Extract the counts from the countplot
-x_labels = [tick.get_text() for tick in ax.get_xticklabels()]
-counts = [rect.get_height() for rect in ax.patches]
-print("Distribution [Dropout, Graduate, Enrolled]: ", counts)
+y_pred=logreg.predict(X_test) 
 
-# Create an ASCII bar plot using Plotext
-plx.bar(x_labels, counts)
-plx.title('Classes distribution resampled')
-plx.xlabel('Classes')
-plx.ylabel('Count')
+cnf_matrix = metrics.confusion_matrix(y_test, y_pred) 
 
-# Display the countplot in the terminal
-plx.show()
+print(cnf_matrix) 
+
+print("Accuracy:",metrics.accuracy_score(y_test, y_pred)) 
+
+print("Precision:",metrics.precision_score(y_test, y_pred, average='weighted', zero_division=1)) 
+
+print("Recall:",metrics.recall_score(y_test, y_pred, average='weighted', zero_division=1))
